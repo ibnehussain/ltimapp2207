@@ -249,3 +249,14 @@ Then deploy the entire repo root as the app directory.
 ## License
 
 MIT
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [docs/API.md](docs/API.md) | Full API reference for the `GET /weather` endpoint. |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture, component responsibilities, and data flow. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup, branching workflow, and contribution guidelines. |
+

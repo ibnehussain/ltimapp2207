@@ -1,3 +1,24 @@
+"""
+services/weather_service.py — Fetches weather data from Open-Meteo.
+
+Two public entry points are provided:
+
+* :func:`get_weather_by_city` — resolves a city name via the Open-Meteo
+  geocoding API, then fetches weather for the returned coordinates.
+* :func:`get_weather_by_coords` — fetches weather directly from a lat/lon
+  pair (used for the browser Geolocation flow).
+
+Both return a normalised dictionary ready to be serialised as JSON by the
+Flask route layer.
+
+External APIs used
+------------------
+* **Geocoding** — ``https://geocoding-api.open-meteo.com/v1/search``
+* **Weather**   — ``https://api.open-meteo.com/v1/forecast``
+
+No API key is required.
+"""
+
 import requests
 
 GEOCODING_URL = 'https://geocoding-api.open-meteo.com/v1/search'
@@ -33,10 +54,34 @@ WMO_CODES = {
 
 
 def _wmo(code: int):
+    """Look up a WMO weather interpretation code.
+
+    Args:
+        code (int): WMO weather code returned by Open-Meteo.
+
+    Returns:
+        tuple[str, str]: A ``(condition_label, emoji)`` pair.
+        Falls back to ``('Unknown', '🌡️')`` for unrecognised codes.
+    """
     return WMO_CODES.get(code, ('Unknown', '🌡️'))
 
 
 def get_weather_by_city(city: str) -> dict:
+    """Resolve a city name to coordinates and return weather data.
+
+    Calls the Open-Meteo geocoding API to convert *city* into a
+    latitude/longitude pair, then delegates to :func:`_fetch_weather`.
+
+    Args:
+        city (str): The city name to look up (e.g. ``'London'``).
+
+    Returns:
+        dict: Normalised weather payload — see :func:`_fetch_weather`.
+
+    Raises:
+        LookupError: If the geocoding API returns no results for *city*.
+        requests.HTTPError: If either upstream HTTP request fails.
+    """
     # Step 1: resolve city name → lat/lon
     geo_resp = requests.get(
         GEOCODING_URL,
@@ -59,10 +104,48 @@ def get_weather_by_city(city: str) -> dict:
 
 
 def get_weather_by_coords(lat: float, lon: float) -> dict:
+    """Return weather data for a specific latitude/longitude.
+
+    Args:
+        lat (float): Latitude of the location.
+        lon (float): Longitude of the location.
+
+    Returns:
+        dict: Normalised weather payload — see :func:`_fetch_weather`.
+        ``city`` is set to ``'Your Location'`` and ``country`` is empty.
+
+    Raises:
+        requests.HTTPError: If the upstream HTTP request fails.
+    """
     return _fetch_weather(lat=lat, lon=lon, city='Your Location', country='')
 
 
 def _fetch_weather(lat: float, lon: float, city: str, country: str) -> dict:
+    """Fetch current conditions and a 5-day forecast from Open-Meteo.
+
+    Args:
+        lat (float): Latitude of the location.
+        lon (float): Longitude of the location.
+        city (str): Display name for the city (used in the response payload).
+        country (str): ISO 3166-1 alpha-2 country code (e.g. ``'GB'``).
+
+    Returns:
+        dict: Normalised weather payload with the following keys:
+
+        * ``city`` (str)
+        * ``country`` (str)
+        * ``temperature`` (float) — current temperature in °C.
+        * ``feels_like`` (float) — apparent temperature in °C.
+        * ``humidity`` (int) — relative humidity in %.
+        * ``wind_speed`` (float) — wind speed in m/s.
+        * ``condition`` (str) — human-readable condition label.
+        * ``icon`` (str) — weather emoji.
+        * ``forecast`` (list[dict]) — up to 5 daily forecast objects, each
+          with ``date``, ``high``, ``low``, ``condition``, and ``icon``.
+
+    Raises:
+        requests.HTTPError: If the upstream HTTP request fails.
+    """
     resp = requests.get(
         WEATHER_URL,
         params={

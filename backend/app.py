@@ -1,3 +1,11 @@
+"""
+app.py — Flask application factory for the Weather Dashboard backend.
+
+Creates and configures the Flask app with CORS, caching, and blueprint
+registration.  Run directly (``python app.py``) for local development; use
+a WSGI server such as gunicorn for production.
+"""
+
 import sys
 import os
 
@@ -14,6 +22,13 @@ cache = Cache()
 
 
 def create_app():
+    """Create and configure the Flask application.
+
+    Returns:
+        Flask: A fully configured Flask application instance with CORS enabled
+        for the ``/weather`` endpoint, in-memory response caching, and the
+        weather blueprint registered.
+    """
     app = Flask(__name__)
     app.config.from_object(Config)
 
